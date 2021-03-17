@@ -1,0 +1,6 @@
+#set ouput back to normal
+set BEACON_OUTPUT {
+	
+		return "\c9[+]\o " . replace($2, "([a-z]):\n", "\$1\cE:\n\o", 1);
+	
+}

