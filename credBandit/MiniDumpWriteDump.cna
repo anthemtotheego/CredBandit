@@ -2,7 +2,7 @@
 beacon_command_register(
 "credBandit", 
 "runs an all in memory custom MiniDumpWriteDump implementation using static x64 syscalls and exfiltrates the data back through your beacon or can write to disk.", 
-"Synopsis: credBandit [targit PID]");
+"Synopsis: credBandit [target PID]");
 alias credBandit {
     local('$barch $handle $data $args');
     
