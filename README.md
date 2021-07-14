@@ -86,7 +86,7 @@ beacon> credBandit 708 output
 ## Caveats
 
 1. While I have tried to make this pretty stable, Although this method has become more stable with the download method, BOFs still carry the risk of causing a beacon to crash. Use at your own risk.
-2. Process dumps are large, though chunks will be sent at regular beacon intervals.
+2. Since the BOF is executed in process and takes over the beacon while running, sleep time is not relevant.  Data will be continously sent while dump is exfiltrated.
 3. Lastly, I commented in the code places where you could make modifications if you wanted to do other stuff, for example, write to disk instead, add in different encoding/encryption, Comms, etc.
  
 ## Detection
