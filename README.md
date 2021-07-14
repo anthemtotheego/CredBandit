@@ -5,9 +5,7 @@ CredBandit is a proof of concept Beacon Object File (BOF) that uses static x64 s
 The memory dump is then downloaded over the beacon with Beacon's native download functionality. The advantage of doing it this way is that the dump is never written to disk and is sent via your already established C2 channel. 
 
 # Subject References
-
 This tool wouldn't exist without being able to piggyback off some really great research, tools, and code already published by members of the security community. So thank you. Lastly, if you feel anyone has been left out below, please let me know and I will be sure to get them added.
-
 - Red Team Tactics: Combining Direct System Calls and sRDI to bypass AV/EDR (by [@Cneelis](https://twitter.com/Cneelis)) - [here](https://outflank.nl/blog/2019/06/19/red-team-tactics-combining-direct-system-calls-and-srdi-to-bypass-av-edr/)
 - Direct Syscalls in Beacon Object Files (by [@Cneelis](https://twitter.com/Cneelis)) - [here](https://outflank.nl/blog/2020/12/26/direct-syscalls-in-beacon-object-files/)
 - TransactedSharpMiniDump - [here](https://github.com/PorLaCola25/TransactedSharpMiniDump)
@@ -16,6 +14,7 @@ This tool wouldn't exist without being able to piggyback off some really great r
 - InlineWhsipers - [here](https://github.com/outflanknl/InlineWhispers)
 - ([@ilove2pwn_](https://twitter.com/ilove2pwn_)) - Confirmed my original idea of the possibility of being able to use BeaconPrintf() function to send data back through CS, helped me get started with writing/understanding the amazing (insert == sarcasm) sleep language.  I also borrowed and modified little bit of logic for chunking data in C [here](https://gist.github.com/SecIdiot/82e4162e495602f064aba5b42575da5e)
 - ([@BinaryFaultline](https://twitter.com/BinaryFaultline)) - Added the ability to use beacon's native download functionality
+- ([@Cr0Eax](https://twitter.com/Cr0Eax]) and [@_EthicalChaos_](https://twitter.com/_EthicalChaos_)) - Initial discovery and usage of Beacon's native download functionality. See their tweets about it: https://twitter.com/_EthicalChaos_/status/1413229432219779074?s=20 and https://twitter.com/Cr0Eax/status/1412761297951739907?s=20
 
 ## Getting Started
 
