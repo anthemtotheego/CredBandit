@@ -45,6 +45,11 @@ DECLSPEC_IMPORT DWORD WINAPI VERSION$GetFileVersionInfoSizeW(LPCWSTR lptstrFilen
 DECLSPEC_IMPORT WINBOOL WINAPI VERSION$GetFileVersionInfoW(LPCWSTR lptstrFilename, DWORD dwHandle, DWORD dwLen, LPVOID lpData);
 DECLSPEC_IMPORT WINBOOL WINAPI VERSION$VerQueryValueW(LPCVOID pBlock, LPCWSTR lpSubBlock, LPVOID *lplpBuffer, PUINT puLen);
 WINADVAPI WINBOOL WINAPI ADVAPI32$LookupPrivilegeValueW(LPCWSTR lpSystemName, LPCWSTR lpName, PLUID lpLuid);
+WINBASEAPI void WINAPI MSVCRT$srand(int initial);
+WINBASEAPI int WINAPI MSVCRT$rand();
+WINBASEAPI time_t WINAPI MSVCRT$time(time_t *time);
+WINBASEAPI void WINAPI MSVCRT$sprintf(char*, char[], ...);
+WINBASEAPI int __cdecl MSVCRT$_snprintf(char* s, size_t n, const char* fmt, ...);
 
 typedef void (WINAPI* _RtlInitUnicodeString) (PUNICODE_STRING DestinationString, PCWSTR SourceString);
 typedef NTSTATUS (WINAPI* _RtlSetCurrentTransaction) (PHANDLE);
